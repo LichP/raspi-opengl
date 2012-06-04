@@ -25,6 +25,8 @@ $:.unshift(File.join(File.dirname(__FILE__), 'lib'))
 
 require 'raspigl/bcm_host'
 require 'raspigl/egl'
+require 'raspigl/gles'
+require './cube_texture_and_coords.rb'
 
 CubeState = Struct.new(
   :screen_width,
@@ -150,9 +152,42 @@ def init_ogl(state)
   result = RaspiGL::EGL.eglMakeCurrent(state.display, state.surface, state.surface, state.context)
   assert(RaspiGL::EGL::EGL_FALSE != result,
          "eglMakeCurrent error: got result = #{result}")
+  
+  RaspiGL::GLES.glClearColor(0.15, 0.25, 0.35, 1.0)
+  RaspiGL::GLES.glClear(RaspiGL::GLES::GL_COLOR_BUFFER_BIT)
+  RaspiGL::GLES.glClear(RaspiGL::GLES::GL_DEPTH_BUFFER_BIT)
+  RaspiGL::GLES.glShadeModel(RaspiGL::GLES::GL_FLAT)
+
+  # Enable back face culling.
+  RaspiGL::GLES.glEnable(RaspiGL::GLES::GL_CULL_FACE)
 end
 
+def init_model_proj(state)
+  nearp = 1.0
+  farp = 500.0
+  hht = 0.0
+  hwd = 0.0
 
+  RaspiGL::GLES.glHint(RaspiGL::GLES::GL_PERSPECTIVE_CORRECTION_HINT, RaspiGL::GLES::GL_NICEST)
+
+  RaspiGL::GLES.glViewport(0, 0, state.screen_width, state.screen_height)
+
+  RaspiGL::GLES.glMatrixMode(RaspiGL::GLES::GL_PROJECTION)
+  RaspiGL::GLES.glLoadIdentity()
+
+  hht = nearp * Math.tan(45.0 / 2.0 / 180.0 * Math::PI)
+  hwd = hht * state.screen_width / state.screen_height
+
+  RaspiGL::GLES.glFrustumf(-hwd, hwd, -hht, hht, nearp, farp)
+
+  RaspiGL::GLES.glEnableClientState(RaspiGL::GLES::GL_VERTEX_ARRAY)
+  RaspiGL::GLES.glVertexPointer(3, RaspiGL::GLES::GL_BYTE, 0, $quadx)
+
+  RaspiGL::GLES.glEnableClientState( RaspiGL::GLES::GL_COLOR_ARRAY)
+  RaspiGL::GLES.glColorPointer(4, RaspiGL::GLES::GL_FLOAT, 0, $colorsf)
+
+#  reset_model(state)
+end
 
 $terminate = false
 
@@ -167,7 +202,7 @@ def main
   init_ogl(state)
 
   # Setup the model world
-#  init_model_proj(state)
+  init_model_proj(state)
 
   # initialise the OGLES texture(s)
 #  init_textures(state);
