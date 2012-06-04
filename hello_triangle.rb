@@ -186,7 +186,67 @@ def init_model_proj(state)
   RaspiGL::GLES.glEnableClientState( RaspiGL::GLES::GL_COLOR_ARRAY)
   RaspiGL::GLES.glColorPointer(4, RaspiGL::GLES::GL_FLOAT, 0, $colorsf)
 
-#  reset_model(state)
+  reset_model(state)
+end
+
+def reset_model(state)
+  # reset model position
+  RaspiGL::GLES.glMatrixMode(RaspiGL::GLES::GL_MODELVIEW)
+  RaspiGL::GLES.glLoadIdentity()
+  RaspiGL::GLES.glTranslatef(0.0, 0.0, -50.0)
+
+  # reset model rotation
+  state.rot_angle_x = 45.0
+  state.rot_angle_y = 30.0
+  state.rot_angle_z = 0.0
+
+  state.rot_angle_x_inc = 0.5
+  state.rot_angle_y_inc = 0.5
+  state.rot_angle_z_inc = 0.0
+
+  state.distance = 40.0
+  state.distance_inc = 0.0
+end
+
+def update_model(state)
+  # update position
+  state.rot_angle_x = inc_and_wrap_angle(state.rot_angle_x, state.rot_angle_x_inc)
+  state.rot_angle_y = inc_and_wrap_angle(state.rot_angle_y, state.rot_angle_y_inc)
+  state.rot_angle_z = inc_and_wrap_angle(state.rot_angle_z, state.rot_angle_z_inc)
+  state.distance    = inc_and_clip_distance(state.distance, state.distance_inc)
+
+  RaspiGL::GLES.glLoadIdentity()
+  # move camera back to see the cube
+  RaspiGL::GLES.glTranslatef(0.0, 0.0, -state.distance)
+
+  # Rotate model to new position
+  RaspiGL::GLES.glRotatef(state.rot_angle_x, 1.0, 0.0, 0.0);
+  RaspiGL::GLES.glRotatef(state.rot_angle_y, 0.0, 1.0, 0.0);
+  RaspiGL::GLES.glRotatef(state.rot_angle_z, 0.0, 0.0, 1.0);
+end
+
+def inc_and_wrap_angle(angle = 0.0, angle_inc = 0.0)
+  angle += angle_inc
+
+  if (angle >= 360.0)
+    angle -= 360.0
+  elsif (angle <= 0)
+    angle += 360.0
+  end
+
+  angle
+end
+
+def inc_and_clip_distance(distance = 0.0, distance_inc = 0.0)
+  distance += distance_inc
+
+  if (distance >= 120.0)
+    distance = 120.0
+  elsif (distance <= 40.0)
+    distance = 40.0
+  end
+
+  distance
 end
 
 $terminate = false
@@ -211,7 +271,7 @@ def main
   while !$terminate do  
     sleep(0.005)
     counter += 1
-#    update_model(state);
+    update_model(state);
 #    redraw_scene(state);
     if counter >= 1000
       puts "In render loop ..."
