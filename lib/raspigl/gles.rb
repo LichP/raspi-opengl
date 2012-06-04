@@ -600,11 +600,11 @@ module RaspiGL::GLES
   # Available in both Common and Common-Lite profiles
   attach_function :glActiveTexture,           [:uint], :void
   attach_function :glAlphaFuncx,              [:uint, :int32], :void
-  attach_function :glBindBuffer,              [:uint, :uint], :void
-  attach_function :glBindTexture,             [:uint, :uint], :void
+  attach_function :glBindBuffer,              [:uint, :pointer], :void
+  attach_function :glBindTexture,             [:uint, :pointer], :void
   attach_function :glBlendFunc,               [:uint, :uint], :void
-  attach_function :glBufferData,              [:uint, :long, :pointer, :uint], :void
-  attach_function :glBufferSubData,           [:uint, :long, :long, :pointer], :void
+  attach_function :glBufferData,              [:uint, :pointer, :pointer, :uint], :void
+  attach_function :glBufferSubData,           [:uint, :pointer, :pointer, :pointer], :void
   attach_function :glClear,                   [:uint], :void
   attach_function :glClearColorx,             [:int32, :int32, :int32, :int32], :void
   attach_function :glClearDepthx,             [:int32], :void
