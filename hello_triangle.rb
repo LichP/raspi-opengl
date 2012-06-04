@@ -23,6 +23,7 @@
 
 $:.unshift(File.join(File.dirname(__FILE__), 'lib'))
 
+require 'raspigl/common'
 require 'raspigl/bcm_host'
 require 'raspigl/egl'
 require 'raspigl/gles'
@@ -47,6 +48,8 @@ CubeState = Struct.new(
   :tex_buf2,
   :tex_buf3
 )
+
+IMAGE_SIZE = 128
 
 def assert(condition, message = nil)
   unless condition
@@ -249,6 +252,155 @@ def inc_and_clip_distance(distance = 0.0, distance_inc = 0.0)
   distance
 end
 
+def redraw_scene(state)
+  # Start with a clear screen
+  RaspiGL::GLES.glClear(RaspiGL::GLES::GL_COLOR_BUFFER_BIT)
+  RaspiGL::GLES.glMatrixMode(RaspiGL::GLES::GL_MODELVIEW)
+
+  RaspiGL::GLES.glEnable(RaspiGL::GLES::GL_TEXTURE_2D)
+  RaspiGL::GLES.glTexEnvx(RaspiGL::GLES::GL_TEXTURE_ENV, RaspiGL::GLES::GL_TEXTURE_ENV_MODE, RaspiGL::GLES::GL_REPLACE)
+
+  # Draw first (front) face:
+  # Bind texture surface to current vertices
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[0])
+
+  # Need to rotate textures - do this by rotating each cube face
+  RaspiGL::GLES.glRotatef(270.0, 0.0, 0.0, 1.0)  # front face normal along z axis
+
+  # draw first 4 vertices
+  RaspiGL::GLES.glDrawArrays(RaspiGL::GLES::GL_TRIANGLE_STRIP, 0, 4)
+
+  # same pattern for other 5 faces - rotation chosen to make image orientation 'nice'
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[1])
+  RaspiGL::GLES.glRotatef(90.0, 0.0, 0.0, 1.0 )  # back face normal along z axis
+  RaspiGL::GLES.glDrawArrays(RaspiGL::GLES::GL_TRIANGLE_STRIP, 4, 4)
+
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[2])
+  RaspiGL::GLES.glRotatef(90.0, 1.0, 0.0, 0.0 )  # left face normal along x axis
+  RaspiGL::GLES.glDrawArrays(RaspiGL::GLES::GL_TRIANGLE_STRIP, 8, 4)
+
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[3])
+  RaspiGL::GLES.glRotatef(90.0, 1.0, 0.0, 0.0 )  # right face normal along x axis
+  RaspiGL::GLES.glDrawArrays(RaspiGL::GLES::GL_TRIANGLE_STRIP, 12, 4)
+
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[4])
+  RaspiGL::GLES.glRotatef(270.0, 0.0, 1.0, 0.0 )  # top face normal along y axis
+  RaspiGL::GLES.glDrawArrays(RaspiGL::GLES::GL_TRIANGLE_STRIP, 16, 4)
+
+  RaspiGL::GLES.glTexEnvx(RaspiGL::GLES::GL_TEXTURE_ENV, RaspiGL::GLES::GL_TEXTURE_ENV_MODE, RaspiGL::GLES::GL_MODULATE);
+
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[5])
+  RaspiGL::GLES.glRotatef(90.0, 0.0, 1.0, 0.0 )  # bottom face normal along y axis
+  RaspiGL::GLES.glDrawArrays( RaspiGL::GLES::GL_TRIANGLE_STRIP, 20, 4)
+
+  RaspiGL::GLES.glDisable(RaspiGL::GLES::GL_TEXTURE_2D)
+
+  RaspiGL::EGL.eglSwapBuffers(state.display, state.surface)
+end
+
+def init_textures(state)
+  # load three texture buffers but use them on six OGL|ES texture surfaces
+  load_tex_images(state)
+  state.tex = FFI::MemoryPointer.new(:uint, 6)
+  RaspiGL::GLES.glGenTextures(6, state.tex)
+
+  # setup first texture
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[0])
+  RaspiGL::GLES.glTexImage2D(RaspiGL::GLES::GL_TEXTURE_2D, 0, RaspiGL::GLES::GL_RGB,
+                             IMAGE_SIZE, IMAGE_SIZE, 0,
+                             RaspiGL::GLES::GL_RGB, RaspiGL::GLES::GL_UNSIGNED_BYTE,
+                             state.tex_buf1)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MIN_FILTER, RaspiGL::GLES::GL_NEAREST)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MAG_FILTER, RaspiGL::GLES::GL_NEAREST)
+
+  # setup second texture - reuse first image
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[1])
+  RaspiGL::GLES.glTexImage2D(RaspiGL::GLES::GL_TEXTURE_2D, 0, RaspiGL::GLES::GL_RGB,
+                             IMAGE_SIZE, IMAGE_SIZE, 0,
+                             RaspiGL::GLES::GL_RGB, RaspiGL::GLES::GL_UNSIGNED_BYTE,
+                             state.tex_buf1)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MIN_FILTER, RaspiGL::GLES::GL_NEAREST)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MAG_FILTER, RaspiGL::GLES::GL_NEAREST)
+
+  # third texture
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[2])
+  RaspiGL::GLES.glTexImage2D(RaspiGL::GLES::GL_TEXTURE_2D, 0, RaspiGL::GLES::GL_RGB,
+                             IMAGE_SIZE, IMAGE_SIZE, 0,
+                             RaspiGL::GLES::GL_RGB, RaspiGL::GLES::GL_UNSIGNED_BYTE,
+                             state.tex_buf2)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MIN_FILTER, RaspiGL::GLES::GL_NEAREST)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MAG_FILTER, RaspiGL::GLES::GL_NEAREST)
+
+  # fourth texture  - reuse second image
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[3])
+  RaspiGL::GLES.glTexImage2D(RaspiGL::GLES::GL_TEXTURE_2D, 0, RaspiGL::GLES::GL_RGB,
+                             IMAGE_SIZE, IMAGE_SIZE, 0,
+                             RaspiGL::GLES::GL_RGB, RaspiGL::GLES::GL_UNSIGNED_BYTE,
+                             state.tex_buf2)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MIN_FILTER, RaspiGL::GLES::GL_NEAREST)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MAG_FILTER, RaspiGL::GLES::GL_NEAREST)
+
+  # fifth texture
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[4]);
+  RaspiGL::GLES.glTexImage2D(RaspiGL::GLES::GL_TEXTURE_2D, 0, RaspiGL::GLES::GL_RGB,
+                             IMAGE_SIZE, IMAGE_SIZE, 0,
+                             RaspiGL::GLES::GL_RGB, RaspiGL::GLES::GL_UNSIGNED_BYTE,
+                             state.tex_buf3)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MIN_FILTER, RaspiGL::GLES::GL_NEAREST)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MAG_FILTER, RaspiGL::GLES::GL_NEAREST)
+
+  # sixth texture  - reuse third image
+  RaspiGL::GLES.glBindTexture(RaspiGL::GLES::GL_TEXTURE_2D, state.tex[5])
+  RaspiGL::GLES.glTexImage2D(RaspiGL::GLES::GL_TEXTURE_2D, 0, RaspiGL::GLES::GL_RGB,
+                             IMAGE_SIZE, IMAGE_SIZE, 0,
+                             RaspiGL::GLES::GL_RGB, RaspiGL::GLES::GL_UNSIGNED_BYTE,
+                             state.tex_buf3)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MIN_FILTER, RaspiGL::GLES::GL_NEAREST)
+  RaspiGL::GLES.glTexParameterf(RaspiGL::GLES::GL_TEXTURE_2D, RaspiGL::GLES::GL_TEXTURE_MAG_FILTER, RaspiGL::GLES::GL_NEAREST)
+
+  # setup overall texture environment
+  RaspiGL::GLES.glTexCoordPointer(2, RaspiGL::GLES::GL_FLOAT, 0, $texCoords)
+  RaspiGL::GLES.glEnableClientState(RaspiGL::GLES::GL_TEXTURE_COORD_ARRAY)
+end
+
+def load_tex_images(state)
+  tex_file1 = File.open(File.join(RaspiGL::VC_PATH, "src/hello_pi/hello_triangle/Lucca_128_128.raw"), "rb").read
+  tex_file2 = File.open(File.join(RaspiGL::VC_PATH, "src/hello_pi/hello_triangle/Djenne_128_128.raw"), "rb").read
+  tex_file3 = File.open(File.join(RaspiGL::VC_PATH, "src/hello_pi/hello_triangle/Gaudi_128_128.raw"), "rb").read
+  
+  state.tex_buf1 = FFI::MemoryPointer.new(:char, tex_file1.size)
+  state.tex_buf2 = FFI::MemoryPointer.new(:char, tex_file2.size)
+  state.tex_buf3 = FFI::MemoryPointer.new(:char, tex_file3.size)
+
+  state.tex_buf1.put_bytes(0, tex_file1)
+  state.tex_buf2.put_bytes(0, tex_file2)
+  state.tex_buf3.put_bytes(0, tex_file3)
+end
+
+# Function to be passed to atexit().
+def exit_func(state)
+  # clear screen
+  RaspiGL::GLES.glClear(RaspiGL::GLES::GL_COLOR_BUFFER_BIT)
+  RaspiGL::EGL.eglSwapBuffers(state.display, state.surface)
+
+  # Release OpenGL resources
+  RaspiGL::EGL.eglMakeCurrent(state.display,
+                              RaspiGL::EGL::EGL_NO_SURFACE,
+                              RaspiGL::EGL::EGL_NO_SURFACE,
+                              RaspiGL::EGL::EGL_NO_CONTEXT)
+  RaspiGL::EGL.eglDestroySurface(state.display, state.surface)
+  RaspiGL::EGL.eglDestroyContext(state.display, state.context)
+  RaspiGL::EGL.eglTerminate(state.display)
+
+  # release texture buffers
+  #free(state.tex_buf1)
+  #free(state.tex_buf2)
+  #free(state.tex_buf3)
+
+  puts("\ncube closed")
+end
+
+
 $terminate = false
 
 trap("INT") { $terminate = true }
@@ -265,21 +417,21 @@ def main
   init_model_proj(state)
 
   # initialise the OGLES texture(s)
-#  init_textures(state);
+  init_textures(state)
 
   counter = 0
   while !$terminate do  
     sleep(0.005)
     counter += 1
-    update_model(state);
-#    redraw_scene(state);
+    update_model(state)
+    redraw_scene(state)
     if counter >= 1000
       puts "In render loop ..."
       counter = 0
     end
   end
 
-#  exit_func
+  exit_func(state)
   return 0;
 end
 
