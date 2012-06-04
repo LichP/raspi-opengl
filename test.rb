@@ -3,6 +3,7 @@ $:.unshift(File.join(File.dirname(__FILE__), 'lib'))
 
 require 'raspigl/bcm_host'
 require 'raspigl/egl'
+require 'raspigl/gles'
 require 'pry'
 
 binding.pry
