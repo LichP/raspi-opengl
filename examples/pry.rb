@@ -1,9 +1,7 @@
 #!/usr/bin/ruby1.9.1
-$:.unshift(File.join(File.dirname(__FILE__), 'lib'))
+$:.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 
-require 'raspigl/bcm_host'
-require 'raspigl/egl'
-require 'raspigl/gles'
+require 'raspigl'
 require 'pry'
 
 binding.pry
