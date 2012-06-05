@@ -21,7 +21,7 @@
 #
 # A rotating cube rendered with OpenGL|ES. Three images used as textures on the cube faces.
 
-$:.unshift(File.join(File.dirname(__FILE__), 'lib'))
+$:.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 
 require 'raspigl/common'
 require 'raspigl/bcm_host'
