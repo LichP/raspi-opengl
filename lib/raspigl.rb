@@ -111,9 +111,35 @@ class RaspiGL
   #         function calls
   def load_texture_from_file(pathspec)
     data = File.open(File.join(pathspec), "rb").read
+    load_texture_from_string(data)
+  end
+  
+  # Load a texture from a string into an OpenGL compatible buffer
+  #
+  # @param [String] string containing texture data
+  # @return [FFI::Pointer] loaded texture data ready for use with OpenGL
+  #         function calls
+  def load_texture_from_string(data)
     buffer = FFI::MemoryPointer.new(:char, data.size)
     buffer.put_bytes(0, data)
     buffer
+  end
+  
+  # Load an array of coordinates into memory
+  #
+  # @param [Array] array containing coordinates as floats or integers
+  # @return [FFI::Pointer] loaded coordinates ready for use with OpenGL
+  #         fucntion calls
+  def load_coords_from_array(coords)
+    case coords.first
+      when Fixnum
+        coord_pointer = FFI::MemoryPointer.new(:int, coords.length)
+        coord_pointer.write_array_of_int(coords)
+      when Float
+        coord_pointer = FFI::MemoryPointer.new(:float, coords.length)
+        coord_pointer.write_array_of_float(coords)
+    end
+    coord_pointer
   end
   
   protected
