@@ -25,8 +25,8 @@ $:.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 
 require 'raspigl/common'
 require 'raspigl/bcm_host'
-require 'raspigl/egl'
 require 'raspigl/gles'
+require 'raspigl/egl'
 require './cube_texture_and_coords.rb'
 
 CubeState = Struct.new(

@@ -1,7 +1,7 @@
 require 'ffi'
 require File.join(File.dirname(__FILE__), 'raspigl', 'bcm_host')
-require File.join(File.dirname(__FILE__), 'raspigl', 'egl')
 require File.join(File.dirname(__FILE__), 'raspigl', 'gles')
+require File.join(File.dirname(__FILE__), 'raspigl', 'egl')
 
 class RaspiGL
   class RaspiGLError < StandardError; end
